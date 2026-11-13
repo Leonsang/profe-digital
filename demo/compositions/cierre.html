@@ -1,0 +1,36 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #f6f3ec; font-family: Inter, sans-serif; overflow: hidden; }
+    #cierre-lockup { position: absolute; left: 0; width: 1920px; top: 330px; display: flex; justify-content: center; align-items: center; gap: 36px; }
+    #cierre-mark {
+      position: relative; width: 196px; height: 196px; border-radius: 52px; background: #d9d4c8;
+      color: #fff; font-size: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    #cierre-fill { position: absolute; inset: 0; background: #1d2a3f; }
+    #cierre-sigma { position: relative; }
+    #cierre-word { font-size: 112px; font-weight: 900; color: #1d2a3f; letter-spacing: -0.03em; }
+    #cierre-repo {
+      position: absolute; left: 50%; top: 610px; width: 980px; margin-left: -490px; padding: 22px 0; border-radius: 18px;
+      background: #1d2a3f; color: #fff; text-align: center; font-family: "JetBrains Mono", monospace; font-size: 38px;
+    }
+    #cierre-stack { position: absolute; left: 0; width: 1920px; top: 740px; text-align: center; font-size: 30px; color: #66707f; }
+  </style>
+  <div id="root" data-composition-id="cierre" data-width="1920" data-height="1080">
+    <div id="cierre-lockup" class="clip" data-start="0" data-duration="6.5">
+      <div id="cierre-mark"><div id="cierre-fill"></div><span id="cierre-sigma">∑</span></div>
+      <span id="cierre-word">Profe Digital</span>
+    </div>
+    <div id="cierre-repo" class="clip" data-start="0" data-duration="6.5">github.com/Leonsang/profe-digital</div>
+    <p id="cierre-stack" class="clip" data-start="0" data-duration="6.5">Gemini Live · Google ADK 2.14 · tldraw · hecho por Erick Sang</p>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cierre-mark", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "expo.out" }, 0.1);
+    // la marca se "llena" de tinta de abajo hacia arriba
+    tl.fromTo("#cierre-fill", { clipPath: "inset(100% 0 0 0)" }, { clipPath: "inset(0% 0 0 0)", duration: 0.7, ease: "power2.inOut" }, 0.45);
+    tl.fromTo("#cierre-word", { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.6, ease: "power3.out" }, 0.9);
+    tl.fromTo("#cierre-repo", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, ease: "expo.out" }, 1.6);
+    tl.fromTo("#cierre-stack", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 2.0);
+    window.__timelines["cierre"] = tl;
+  </script>
+</template>

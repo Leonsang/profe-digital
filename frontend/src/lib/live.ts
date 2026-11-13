@@ -22,6 +22,8 @@ export interface Question {
   options: string[];
   correct: number;
   hint: string;
+  skill: string;
+  topic: string;
 }
 
 export interface Quest {
@@ -32,10 +34,55 @@ export interface Quest {
   reward: string;
 }
 
+export interface Skill {
+  skill: string;
+  topic: string;
+  mastery: number;
+  attempts: number;
+  correct: number;
+}
+
+export interface Milestone {
+  key: string;
+  title: string;
+  detail: string;
+  created_at?: number;
+}
+
+export interface WorkshopExercise {
+  statement: string;
+  skill: string;
+  difficulty: 'fácil' | 'media' | 'difícil';
+  hint: string;
+  status: 'pending' | 'in_progress' | 'done' | 'skipped';
+  note?: string;
+}
+
+export interface Workshop {
+  id: number;
+  title: string;
+  topic: string;
+  status: 'active' | 'done' | 'archived';
+  plan: { summary: string; prerequisites: string[]; teaching_plan: string; exercises: WorkshopExercise[] };
+}
+
+export interface Progress {
+  type: 'progress';
+  profile: { name: string; grade: string; goals: string; preferences: string };
+  streak: number;
+  sessions: number;
+  skills: Skill[];
+  milestones: Milestone[];
+  memories: { category: string; fact: string }[];
+  workshop: Workshop | null;
+}
+
 export type ServerEvent =
   | BoardEvent
   | Question
   | Quest
+  | Progress
+  | ({ type: 'milestone' } & Milestone)
   | { type: 'transcript'; role: 'user' | 'profe'; text: string; final: boolean }
   | { type: 'interrupted' }
   | { type: 'turn_complete' }
@@ -52,6 +99,19 @@ export interface LiveHandlers {
 }
 
 const BACKEND = (import.meta.env.VITE_BACKEND_WS as string | undefined) ?? 'ws://localhost:8000';
+/** Misma URL del backend, en http(s), para la API REST. */
+export const API = BACKEND.replace(/^ws/, 'http');
+
+/** Identidad local del estudiante: sin cuentas, el navegador recuerda quién es. */
+export function studentId(): string {
+  const KEY = 'profe-digital:student';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = `st-${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
 
 export class LiveSession {
   private ws?: WebSocket;
@@ -87,7 +147,7 @@ export class LiveSession {
     });
 
     const id = crypto.randomUUID().slice(0, 8);
-    const ws = new WebSocket(`${BACKEND}/ws/${id}`);
+    const ws = new WebSocket(`${BACKEND}/ws/${id}?student=${encodeURIComponent(studentId())}`);
     ws.binaryType = 'arraybuffer';
     ws.onopen = () => this.handlers.onStatus('live');
     ws.onclose = () => this.handlers.onStatus('closed');

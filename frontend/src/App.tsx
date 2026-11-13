@@ -3,8 +3,24 @@ import { Tldraw, createShapeId, type Editor, type TLShapeId } from 'tldraw';
 import 'tldraw/tldraw.css';
 import 'katex/dist/katex.min.css';
 import { CARD, CardShapeUtil, cardSize } from './board/CardShape';
-import { LiveSession, type BoardEvent, type Quest, type Question, type ServerEvent, type Status } from './lib/live';
+import {
+  API,
+  LiveSession,
+  studentId,
+  type BoardEvent,
+  type Milestone,
+  type Progress,
+  type Quest,
+  type Question,
+  type ServerEvent,
+  type Status,
+} from './lib/live';
+import { Celebration } from './panel/Celebration';
+import { ProgressPanel } from './panel/ProgressPanel';
 import { QuestPanel } from './panel/QuestPanel';
+import { WorkshopPanel } from './panel/WorkshopPanel';
+
+type Tab = 'clase' | 'avance' | 'taller';
 
 const shapeUtils = [CardShapeUtil];
 const COLUMN_W = 520;
@@ -34,6 +50,18 @@ export default function App() {
   const [typed, setTyped] = useState('');
   const [sending, setSending] = useState(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const [tab, setTab] = useState<Tab>('clase');
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [celebrations, setCelebrations] = useState<Milestone[]>([]);
+
+  useEffect(() => {
+    fetch(`${API}/api/students/${studentId()}/progress`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((p: Progress | null) => p && setProgress(p))
+      .catch(() => {});
+  }, []);
+
+  const closeCelebration = useCallback(() => setCelebrations((c) => c.slice(1)), []);
 
   useEffect(() => {
     const el = transcriptRef.current;
@@ -116,6 +144,13 @@ export default function App() {
           break;
         case 'question':
           setQuestion(event);
+          setTab('clase');
+          break;
+        case 'progress':
+          setProgress(event);
+          break;
+        case 'milestone':
+          setCelebrations((c) => [...c, event]);
           break;
         case 'quest':
           setQuests((q) => [event, ...q].slice(0, 4));
@@ -189,11 +224,18 @@ export default function App() {
   };
 
   const onAnswer = (q: Question, choice: number) => {
-    session.current?.send({ type: 'answer', question: q.question, choice: q.options[choice], correct: choice === q.correct });
+    session.current?.send({
+      type: 'answer',
+      question: q.question,
+      choice: q.options[choice],
+      correct: choice === q.correct,
+      skill: q.skill,
+      topic: q.topic,
+    });
   };
 
   const onQuestProgress = (quest: Quest, done: number) => {
-    if (done === quest.steps.length) session.current?.send({ type: 'answer', text: `Terminé el reto "${quest.title}".` });
+    if (done === quest.steps.length) session.current?.send({ type: 'quest_done', title: quest.title });
   };
 
   const live = status === 'live';
@@ -263,7 +305,26 @@ export default function App() {
             </div>
           </div>
 
-          <div className="transcript" aria-live="polite" ref={transcriptRef}>
+          <nav className="tabs" role="tablist">
+            {(
+              [
+                ['clase', 'Clase'],
+                ['avance', 'Mi avance'],
+                ['taller', progress?.workshop && progress.workshop.status === 'active' ? 'Taller •' : 'Taller'],
+              ] as const
+            ).map(([id, label]) => (
+              <button key={id} role="tab" aria-selected={tab === id} className={`tab ${tab === id ? 'is-active' : ''}`} onClick={() => setTab(id)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {tab === 'avance' && <ProgressPanel progress={progress} />}
+          {tab === 'taller' && (
+            <WorkshopPanel workshop={progress?.workshop ?? null} live={live} onUploaded={setProgress} />
+          )}
+
+          <div className="transcript" aria-live="polite" ref={transcriptRef} hidden={tab !== 'clase'}>
             {[...lines, ...(draft ? [draft] : [])].slice(-12).map((line, i) => (
               <p key={i} className={`line ${line.role}`}>
                 <span>{line.role === 'profe' ? 'Profe' : 'Tú'}</span>
@@ -272,7 +333,9 @@ export default function App() {
             ))}
           </div>
 
-          <QuestPanel question={question} quests={quests} onAnswer={onAnswer} onQuestProgress={onQuestProgress} />
+          {tab === 'clase' && (
+            <QuestPanel question={question} quests={quests} onAnswer={onAnswer} onQuestProgress={onQuestProgress} />
+          )}
 
           <div className="composer">
             <button className="btn wide" disabled={!live || sending} onClick={sendSnapshot}>
@@ -295,6 +358,7 @@ export default function App() {
           </div>
         </aside>
       </main>
+      {celebrations[0] && <Celebration milestone={celebrations[0]} onDone={closeCelebration} />}
     </div>
   );
 }

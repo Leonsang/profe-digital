@@ -605,3 +605,410 @@ input {
     border-top: 1px solid var(--line);
   }
 }
+
+/* ---------------------------------------------------------------- tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--paper);
+}
+
+.tab {
+  flex: 1;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.is-active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(29, 42, 63, 0.12);
+}
+
+/* ---------------------------------------------------------------- progreso */
+.progress,
+.workshop {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-name {
+  margin: 6px 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.profile-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.profile-list dt {
+  color: var(--muted);
+}
+
+.profile-list dd {
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+}
+
+.stat strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat span {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.skills,
+.badges,
+.memories {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skills li + li {
+  margin-top: 10px;
+}
+
+.skill-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.skill-name {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.skill-pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.skill-bar {
+  height: 8px;
+  margin: 4px 0 2px;
+  border-radius: 999px;
+  background: #ece8de;
+  overflow: hidden;
+}
+
+.skill-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  transition: width 0.5s ease;
+}
+
+.skill-bar.is-mastered span {
+  background: var(--green);
+}
+
+.skill-meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.badges li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.badges li + li {
+  border-top: 1px solid var(--line);
+}
+
+.badge-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #fdf3df;
+  font-size: 18px;
+}
+
+.badges strong,
+.badges small {
+  display: block;
+}
+
+.badges small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.memories li {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.memories li + li {
+  margin-top: 6px;
+}
+
+.memory-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #e3ebfd;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- taller */
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1.5px dashed #c9c2b2;
+  border-radius: var(--radius);
+  background: #fff;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  border-color: var(--blue);
+}
+
+.dropzone input {
+  display: none;
+}
+
+.dropzone small {
+  color: var(--muted);
+}
+
+.dropzone.is-busy {
+  border-color: var(--blue);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    background: #f2f6fe;
+  }
+}
+
+.prereq {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exercise {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.exercise p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.exercise.is-done {
+  border-color: #b7e2cc;
+  background: #f1faf5;
+}
+
+.exercise.is-in_progress {
+  border-color: var(--blue);
+}
+
+.exercise-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.exercise-n {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.exercise-note {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.chip {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #ece8de;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chip.done {
+  background: #dcf3e8;
+  color: var(--green);
+}
+
+.chip.in_progress {
+  background: #e3ebfd;
+  color: var(--blue);
+}
+
+.chip.level {
+  margin-left: auto;
+}
+
+/* ---------------------------------------------------------------- celebración */
+.celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(29, 42, 63, 0.12);
+  animation: fade 0.25s ease-out;
+  pointer-events: none;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.celebration-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 380px;
+  padding: 26px 32px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(29, 42, 63, 0.25);
+  text-align: center;
+  animation: rise 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.92);
+  }
+}
+
+.celebration-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+
+.celebration-card strong {
+  font-size: 24px;
+}
+
+.celebration-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -12px;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  animation-name: fall;
+  animation-timing-function: cubic-bezier(0.3, 0.6, 0.6, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes fall {
+  to {
+    top: 105%;
+    transform: rotate(720deg) translateX(40px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+
+  .celebration-card {
+    animation: none;
+  }
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* el campo de texto queda siempre visible aunque el panel tenga mucho contenido */
+.composer {
+  position: sticky;
+  bottom: -16px;
+  margin-bottom: -16px;
+  padding: 10px 0 16px;
+  background: var(--card);
+  z-index: 2;
+}

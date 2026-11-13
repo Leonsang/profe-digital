@@ -4,6 +4,14 @@ Un profesor de matemáticas y física **100 % digital**: le hablas, te responde 
 
 Construido con **Google ADK 2.14** y **Gemini Live** (`gemini-3.8-live`, audio nativo), FastAPI y una pizarra **tldraw**.
 
+## Demo
+
+[![Demo de Profe Digital: el profe celebra el perfil de Ana](demo/renders/teaser.gif)](demo/renders/profe-digital-demo.mp4)
+
+▶️ **[Ver el demo completo (1:36, con la voz real del profe)](demo/renders/profe-digital-demo.mp4)**
+
+Ana entra por primera vez. El profe la conoce y arma su perfil conversando. Ella sube su taller de ecuaciones cuadráticas y el profe lo prepara, la guía en la pizarra sin darle las respuestas y celebra su primer acierto. Al día siguiente, el profe la recuerda. Todo lo que aparece en el video es la app real; la voz es la de Gemini 3.8 Live en esa sesión. El video está hecho con [HyperFrames](https://hyperframes.heygen.com) y su fuente está en [`demo/`](demo/).
+
 ## Qué hace
 
 - **Conversación de voz en ambos sentidos.** El audio del micrófono entra continuo y el VAD de Gemini decide los turnos. Si hablas encima del profe, se calla al instante y te escucha.
@@ -11,6 +19,9 @@ Construido con **Google ADK 2.14** y **Gemini Live** (`gemini-3.8-live`, audio n
 - **Ve lo que escribes.** Escribe tu intento con el lápiz y pulsa *Revisa lo que escribí*. El profe recibe la imagen, lee tu razonamiento y señala el paso exacto donde algo se torció.
 - **Preguntas y retos.** Cada pocas ideas abre una pregunta en el panel y espera tu respuesta. Al cerrar un tema te propone un reto de varios pasos.
 - **Empatía.** Usa *affective dialog* (lee la emoción en la voz) y *proactive audio* (no contesta a ruidos ni cuando piensas en voz alta), más una instrucción socrática.
+- **Perfil y memoria.** El profe arma tu perfil conversando (nombre, nivel, meta, cómo aprendes mejor) y guarda lo que vale la pena recordar: dificultades, intereses, cómo te sientes con un tema. Al cerrar cada clase, un modelo de texto la resume. Al abrir la siguiente, el profe recibe tu perfil, tu memoria y tu avance, y retoma donde quedaron: «La última vez factorizaste súper bien…».
+- **Avance y logros.** Cada habilidad tiene un dominio de 0 a 100 que sube con las respuestas del panel, los retos y la evidencia que anota el profe. Los hitos (primera clase, perfil listo, primer acierto, rachas de aciertos y de días, habilidad dominada, mitad y final del taller) se detectan en el servidor: el profe te felicita en voz alta y la pantalla lo celebra. La pestaña **Mi avance** muestra perfil, racha, habilidades, logros y lo que el profe recuerda de ti.
+- **Talleres.** Sube tu taller (PDF, foto o texto) en la pestaña **Taller**. Un modelo de texto extrae cada ejercicio, lo resuelve, le asigna habilidad, dificultad y una primera pista, y arma un plan de enseñanza. El profe lo trabaja contigo ejercicio por ejercicio **sin darte la respuesta**, y la respuesta nunca llega al navegador.
 
 ## Arquitectura
 
@@ -28,6 +39,28 @@ tldraw + panel de quests ◄──────────────── col
 **Herramientas que no detienen la voz.** Cada herramienta de pizarra (`write_formula`, `plot_functions`, `draw_diagram`, `run_simulation`, `show_image`…) solo publica un evento en la cola de la sesión y devuelve al instante. Se declaran `behavior=NON_BLOCKING` con `response_scheduling=WHEN_IDLE`. El modelo sigue hablando mientras aparece el trazo y retoma la explicación al terminar la frase. Con `SILENT`, el profe se quedaba callado después de dibujar; `ask_question` es la única herramienta bloqueante, a propósito: el profe debe callar y esperar tu respuesta.
 
 **Interrupción.** Gemini detecta la voz del estudiante y emite `interrupted`. El frontend vacía al instante la cola de reproducción del AudioWorklet.
+
+### Memoria y avance
+
+```
+navegador (id local del estudiante) ──► WS /ws/{sesión}?student=<id>
+                                            │
+   al abrir:  perfil + memoria + avance + taller ──► send_content([Contexto privado])
+   en clase:  update_profile · remember · record_progress · update_workshop   (herramientas ADK)
+              respuestas del panel / retos ──► progress.on_attempt ──► ¿hito nuevo?
+                                                                     ├─► evento "milestone" → celebración en pantalla
+                                                                     └─► "celebrate" / [Sistema] → el profe felicita en voz
+   al cerrar: transcripción ──► gemini-3.5-flash-lite ──► resumen + hechos ──► memoria
+                                            │
+                                     SQLite (profe.db): students · memories · skills · milestones · workshops
+
+POST /api/students/{id}/workshop ──► gemini-3.5-flash-lite (salida estructurada) ──► plan del taller
+                                     └─► si hay clase abierta, se le pasa al profe al instante
+```
+
+- Los hitos los decide el servidor, no el modelo: así se celebran una sola vez y nunca por error.
+- Las herramientas de memoria también son `NON_BLOCKING`. `remember` usa `SILENT` para no interrumpir la explicación; las que pueden desbloquear un logro usan `WHEN_IDLE`, así el profe termina la frase y luego felicita.
+- La identidad es local (un id en `localStorage`), sin cuentas. Para producción hace falta autenticación.
 
 ## Correr en local
 
@@ -61,6 +94,9 @@ cd backend && python scripts/smoke.py ws://localhost:8000/ws/test "Explícame el
 | `VOICE` / `LANGUAGE` | `Aoede` / `es-US` | Voz y acento del profe |
 | `AFFECTIVE_DIALOG` / `PROACTIVE_AUDIO` | `1` | Empatía por la voz y silencio ante ruidos |
 | `IMAGE_MODEL` | vacío | Activa `generate_illustration` con Nano Banana (requiere facturación; en el nivel gratuito la cuota es 0) |
+| `TEXT_MODEL` | `gemini-3.5-flash-lite` | Prepara talleres y resume cada clase (500 solicitudes/día en el nivel gratuito) |
+| `PROFE_DB` | `backend/profe.db` | SQLite con perfiles, memoria, avance, hitos y talleres |
+| `RECORD_DIR` | vacío | Graba cada clase (voz del profe en WAV y eventos en JSONL) para hacer demos |
 | `ALLOWED_ORIGINS` | `http://localhost:5173` | CORS del frontend |
 
 ## Desplegar

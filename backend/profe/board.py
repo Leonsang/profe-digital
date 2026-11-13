@@ -36,6 +36,13 @@ def close_board(session_id: str) -> None:
     _QUEUES.pop(session_id, None)
 
 
+def send_to_browser(session_id: str, payload: dict[str, Any]) -> None:
+    """Envía un evento cualquiera (avance, hito, taller) al navegador de esa sesión."""
+    queue = _QUEUES.get(session_id)
+    if queue is not None:
+        queue.put_nowait(payload)
+
+
 def _emit(tool_context: ToolContext, kind: str, **payload: Any) -> dict[str, str]:
     queue = _QUEUES.get(tool_context.session.id)
     if queue is None:
@@ -153,14 +160,19 @@ def ask_question(
     question: str,
     options: List[str],
     correct_index: int,
+    skill: str,
+    topic: str,
     hint: str = "",
 ) -> dict[str, str]:
     """Abre en el panel de quests una pregunta de opción múltiple para comprobar comprensión.
+    La respuesta del estudiante actualiza su dominio en esa habilidad.
 
     Args:
         question: la pregunta.
         options: entre 2 y 4 opciones.
         correct_index: índice (desde 0) de la opción correcta.
+        skill: habilidad concreta que mide, corta y estable (ej. "despejar variables", "segunda ley de newton").
+        topic: tema general (ej. "álgebra", "dinámica").
         hint: pista que se muestra si el estudiante falla.
     """
     if not 2 <= len(options) <= 4 or not 0 <= correct_index < len(options):
@@ -170,7 +182,16 @@ def ask_question(
         return {"status": "error", "message": "pizarra desconectada"}
     qid = f"q{next(_ids)}"
     queue.put_nowait(
-        {"type": "question", "id": qid, "question": question, "options": options, "correct": correct_index, "hint": hint}
+        {
+            "type": "question",
+            "id": qid,
+            "question": question,
+            "options": options,
+            "correct": correct_index,
+            "hint": hint,
+            "skill": skill,
+            "topic": topic,
+        }
     )
     return {"status": "success", "id": qid, "note": "espera la respuesta del estudiante antes de seguir"}
 

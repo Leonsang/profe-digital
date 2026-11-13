@@ -1,16 +1,22 @@
 """Servidor del Profe Digital: WebSocket bidireccional entre el navegador y Gemini Live (ADK).
 
-Protocolo del WebSocket /ws/{session_id}
+Protocolo del WebSocket /ws/{session_id}?student=<id>
   navegador -> servidor
     binario                 PCM16 mono 16 kHz del micrófono (send_realtime, el VAD decide los turnos)
     {"type":"text"}         mensaje escrito (send_content)
     {"type":"board_snapshot","data":<png base64>,"note":...}  lo que el estudiante escribió
-    {"type":"answer", ...}  respuesta del panel de quests
+    {"type":"answer", question, choice, correct, skill, topic}  respuesta del panel
+    {"type":"quest_done", title}                                reto completado
   servidor -> navegador
     binario                 PCM16 mono 24 kHz con la voz del profe
     {"type":"transcript","role":"user|profe","text":...,"final":bool}
     {"type":"interrupted"} / {"type":"turn_complete"}
     {"type":"board"|"board_clear"|"board_remove"|"question"|"quest", ...}
+    {"type":"progress", ...} / {"type":"milestone", key, title, detail}
+
+REST
+  GET  /api/students/{id}/progress   perfil, dominio, hitos, memoria y taller
+  POST /api/students/{id}/workshop   sube un taller (PDF, foto o texto) y lo prepara
 """
 
 from __future__ import annotations
@@ -20,13 +26,14 @@ import base64
 import json
 import logging
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect  # noqa: E402
+from fastapi import FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from google.adk.agents.live_request_queue import LiveRequestQueue  # noqa: E402
 from google.adk.agents.run_config import RunConfig, StreamingMode  # noqa: E402
@@ -34,17 +41,29 @@ from google.adk.runners import Runner  # noqa: E402
 from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
+from profe import progress, store  # noqa: E402
 from profe.agent import app as profe_app  # noqa: E402
 from profe.board import close_board, open_board  # noqa: E402
+from profe.coach import publish  # noqa: E402
+from profe.prep import prepare_workshop, summarize_session  # noqa: E402
+from profe.recorder import Recorder  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("profe")
 
+store.init()
 session_service = InMemorySessionService()
 runner = Runner(app=profe_app, session_service=session_service)
 
 VOICE = os.getenv("VOICE", "Aoede")
 LANGUAGE = os.getenv("LANGUAGE", "es-US")
+NOISE = re.compile(r"<[^>]*>")  # p. ej. "<no speech detected>"
+STUDENT_ID = re.compile(r"^[A-Za-z0-9_-]{4,40}$")
+WORKSHOP_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/webp", "text/plain", "text/markdown"}
+
+# student_id -> (session_id, cola Live) de la clase abierta: así un taller subido por REST llega a la clase.
+_LIVE: dict[str, tuple[str, LiveRequestQueue]] = {}
+_background: set[asyncio.Task] = set()
 
 
 def _flag(name: str, default: str = "1") -> bool:
@@ -71,6 +90,16 @@ def run_config() -> RunConfig:
     return RunConfig(**cfg)
 
 
+def _say(queue: LiveRequestQueue, text: str) -> None:
+    queue.send_content(types.Content(role="user", parts=[types.Part(text=text)]))
+
+
+def _check(student_id: str) -> str:
+    if not STUDENT_ID.match(student_id):
+        raise HTTPException(400, "id de estudiante inválido")
+    return student_id
+
+
 api = FastAPI(title="Profe Digital")
 api.add_middleware(
     CORSMiddleware,
@@ -85,18 +114,89 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "model": profe_app.root_agent.model}
 
 
+@api.get("/api/students/{student_id}/progress")
+async def get_progress(student_id: str) -> dict:
+    store.ensure_student(_check(student_id))
+    return progress.snapshot(student_id)
+
+
+@api.post("/api/students/{student_id}/workshop")
+async def upload_workshop(student_id: str, file: UploadFile) -> dict:
+    """Recibe el taller, lo prepara con el modelo de texto y lo deja activo (y avisa a la clase abierta)."""
+    store.ensure_student(_check(student_id))
+    mime = (file.content_type or "").split(";")[0]
+    if mime not in WORKSHOP_TYPES:
+        raise HTTPException(415, "Sube un PDF, una foto (PNG, JPG o WebP) o un texto.")
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(413, "El archivo supera 10 MB.")
+    profile = store.get_student(student_id)
+    try:
+        plan = await prepare_workshop(data, mime, f"{profile.get('grade', '')} · {profile.get('preferences', '')}")
+    except Exception as exc:
+        log.exception("no se pudo preparar el taller")
+        raise HTTPException(502, f"No pude leer el taller: {str(exc)[:200]}") from exc
+    if not plan.exercises:
+        raise HTTPException(422, "No encontré ejercicios en el archivo.")
+    workshop_id = store.save_workshop(student_id, plan.title, plan.topic, plan.model_dump())
+    won = []
+    if store.award(student_id, f"workshop_new:{workshop_id}", "Trajiste un taller", plan.title):
+        won = [{"key": f"workshop_new:{workshop_id}", "title": "Trajiste un taller", "detail": plan.title}]
+    live = _LIVE.get(student_id)
+    if live:
+        session_id, queue = live
+        workshop = store.active_workshop(student_id)
+        note = "[Taller] El estudiante acaba de subir su taller. " + progress.workshop_brief(workshop)
+        if won:
+            note += "\n" + progress.celebration_note(won)
+        _say(queue, note)
+        publish(session_id, student_id, won)
+    return progress.snapshot(student_id)
+
+
+async def _remember_session(student_id: str, transcript: list[str]) -> None:
+    summary = await summarize_session("\n".join(transcript))
+    if not summary:
+        return
+    store.remember(student_id, "sesión", f"{summary.summary} Próximo paso: {summary.next_step}")
+    for fact in summary.facts:
+        store.remember(student_id, fact.category, fact.fact)
+    log.info("memoria de la clase guardada para %s", student_id)
+
+
 @api.websocket("/ws/{session_id}")
-async def live(websocket: WebSocket, session_id: str) -> None:
+async def live(websocket: WebSocket, session_id: str, student: str = "") -> None:
     await websocket.accept()
-    user_id = f"student-{session_id}"
+    student_id = student if STUDENT_ID.match(student or "") else f"anon-{session_id}"
+    store.ensure_student(student_id)
+    user_id = f"student-{student_id}"
     session = await session_service.get_session(app_name=profe_app.name, user_id=user_id, session_id=session_id)
     if session is None:
-        await session_service.create_session(app_name=profe_app.name, user_id=user_id, session_id=session_id)
+        await session_service.create_session(
+            app_name=profe_app.name, user_id=user_id, session_id=session_id, state={"student_id": student_id}
+        )
 
     board_queue = open_board(session_id)
     queue = LiveRequestQueue()
-    # Arranque: el profe saluda sin esperar a que el estudiante hable.
-    queue.send_content(types.Content(role="user", parts=[types.Part(text="(El estudiante acaba de entrar a la clase.)")]))
+    _LIVE[student_id] = (session_id, queue)
+    transcript: list[str] = []
+    rec = Recorder(session_id)
+
+    # Arranque: el profe recibe perfil, memoria, avance y taller, y saluda sin esperar.
+    visit = store.touch_session(student_id)
+    won = progress.on_session_start(student_id, visit["streak"], visit["sessions"])
+    opening = progress.context_for_profe(student_id) + "\n\n(El estudiante acaba de entrar a la clase.)"
+    if won:
+        opening += "\n" + progress.celebration_note(won)
+    _say(queue, opening)
+    publish(session_id, student_id, won)
+
+    def answer(text: str, won: list[dict[str, str]]) -> None:
+        publish(session_id, student_id, won)
+        if won:
+            text += "\n" + progress.celebration_note(won)
+        transcript.append(text)
+        _say(queue, text)
 
     async def upstream() -> None:
         while True:
@@ -108,25 +208,28 @@ async def live(websocket: WebSocket, session_id: str) -> None:
                 continue
             data = json.loads(message.get("text") or "{}")
             kind = data.get("type")
+            rec.event(f"student:{kind}", **{k: v for k, v in data.items() if k not in ("type", "data")})
             if kind == "text":
-                queue.send_content(types.Content(role="user", parts=[types.Part(text=data["text"])]))
+                transcript.append(f"Estudiante: {data['text']}")
+                _say(queue, data["text"])
             elif kind == "board_snapshot":
                 image = base64.b64decode(data["data"])
                 note = data.get("note") or "Esto es lo que escribí en la pizarra. ¿Lo revisas?"
+                transcript.append("Estudiante: (mostró lo que escribió en la pizarra)")
                 queue.send_content(
                     types.Content(
                         role="user",
                         parts=[types.Part(inline_data=types.Blob(data=image, mime_type="image/png")), types.Part(text=note)],
                     )
                 )
-            elif kind == "answer":
-                verdict = "correcta" if data.get("correct") else "incorrecta"
-                text = (
-                    f"[Panel] Respondí '{data.get('choice')}' a la pregunta '{data.get('question')}' ({verdict})."
-                    if data.get("question")
-                    else f"[Panel] {data.get('text', '')}"
-                )
-                queue.send_content(types.Content(role="user", parts=[types.Part(text=text)]))
+            elif kind == "answer" and data.get("question"):
+                correct = bool(data.get("correct"))
+                _, won = progress.on_attempt(student_id, data.get("skill") or "general", data.get("topic") or "", correct)
+                verdict = "correcta" if correct else "incorrecta"
+                answer(f"[Panel] Respondí '{data.get('choice')}' a la pregunta '{data.get('question')}' ({verdict}).", won)
+            elif kind == "quest_done":
+                title = str(data.get("title", "reto"))
+                answer(f"[Panel] Terminé el reto «{title}».", progress.on_quest_done(student_id, title))
 
     async def downstream() -> None:
         async for event in runner.run_live(
@@ -136,15 +239,14 @@ async def live(websocket: WebSocket, session_id: str) -> None:
                 for part in event.content.parts:
                     blob = part.inline_data
                     if blob and blob.data and (blob.mime_type or "").startswith("audio/pcm"):
+                        rec.audio(blob.data)
                         await websocket.send_bytes(blob.data)
-            if event.input_transcription and event.input_transcription.text:
-                await websocket.send_json(
-                    {"type": "transcript", "role": "user", "text": event.input_transcription.text, "final": not event.partial}
-                )
-            if event.output_transcription and event.output_transcription.text:
-                await websocket.send_json(
-                    {"type": "transcript", "role": "profe", "text": event.output_transcription.text, "final": not event.partial}
-                )
+            for role, chunk in (("user", event.input_transcription), ("profe", event.output_transcription)):
+                if chunk and chunk.text and not NOISE.fullmatch(chunk.text.strip()):
+                    if not event.partial:
+                        rec.event("say", role=role, text=chunk.text)
+                        transcript.append(f"{'Estudiante' if role == 'user' else 'Profe'}: {chunk.text}")
+                    await websocket.send_json({"type": "transcript", "role": role, "text": chunk.text, "final": not event.partial})
             if event.interrupted:
                 await websocket.send_json({"type": "interrupted"})
             if event.turn_complete:
@@ -152,7 +254,10 @@ async def live(websocket: WebSocket, session_id: str) -> None:
 
     async def board() -> None:
         while True:
-            await websocket.send_json(await board_queue.get())
+            payload = await board_queue.get()
+            if payload.get("type") != "progress":
+                rec.event(payload.get("type", "?"), **{k: v for k, v in payload.items() if k in ("kind", "title", "latex", "question")})
+            await websocket.send_json(payload)
 
     tasks = [asyncio.create_task(t()) for t in (upstream, downstream, board)]
     try:
@@ -169,6 +274,13 @@ async def live(websocket: WebSocket, session_id: str) -> None:
         for task in tasks:
             task.cancel()
         close_board(session_id)
+        rec.close()
+        if _LIVE.get(student_id, ("", None))[0] == session_id:
+            _LIVE.pop(student_id, None)
+        # La memoria de la clase se escribe en segundo plano, sin bloquear el cierre.
+        job = asyncio.create_task(_remember_session(student_id, transcript))
+        _background.add(job)
+        job.add_done_callback(_background.discard)
 
 
 if __name__ == "__main__":

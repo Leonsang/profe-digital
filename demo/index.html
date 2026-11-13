@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #f6f3ec; }
+      #root { width: 100%; height: 100%; position: relative; font-family: Inter, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="96.5" data-width="1920" data-height="1080">
+      <!-- escenas -->
+      <div id="intro" data-composition-id="intro" data-composition-src="compositions/intro.html" data-start="0" data-duration="4.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="conoce" data-composition-id="conoce" data-composition-src="compositions/conoce.html" data-start="4.5" data-duration="13.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="perfil" data-composition-id="perfil" data-composition-src="compositions/perfil.html" data-start="18" data-duration="8.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="taller" data-composition-id="taller" data-composition-src="compositions/taller.html" data-start="26.5" data-duration="13" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="pizarra" data-composition-id="pizarra" data-composition-src="compositions/pizarra.html" data-start="39.5" data-duration="12.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="acierto" data-composition-id="acierto" data-composition-src="compositions/acierto.html" data-start="52" data-duration="14.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="avance" data-composition-id="avance" data-composition-src="compositions/avance.html" data-start="66.5" data-duration="8" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="dia" data-composition-id="dia" data-composition-src="compositions/dia.html" data-start="74.5" data-duration="1.8" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="memoria" data-composition-id="memoria" data-composition-src="compositions/memoria.html" data-start="76.3" data-duration="13.7" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+      <div id="cierre" data-composition-id="cierre" data-composition-src="compositions/cierre.html" data-start="90" data-duration="6.5" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080"></div>
+
+      <!-- subtítulos de la voz del profe -->
+      <div id="captions" data-composition-id="captions" data-composition-src="compositions/captions.html" data-start="0" data-duration="96.5" data-track-index="3" data-track-kind="captions" data-width="1920" data-height="1080" style="z-index: 10"></div>
+
+      <!-- voz real del profe (Gemini 3.8 Live), grabada en la sesión de la demo -->
+      <audio id="v-hola" class="clip" src="assets/voice/hola.mp3" data-duration="12.15" data-start="5.2" data-track-index="5" data-volume="1"></audio>
+      <audio id="v-perfil" class="clip" src="assets/voice/perfil.mp3" data-duration="6.05" data-start="18.8" data-track-index="5" data-volume="1"></audio>
+      <audio id="v-taller" class="clip" src="assets/voice/taller.mp3" data-duration="10.9" data-start="27.3" data-track-index="5" data-volume="1"></audio>
+      <audio id="v-ejemplo" class="clip" src="assets/voice/ejemplo.mp3" data-duration="11.05" data-start="40.3" data-track-index="5" data-volume="1"></audio>
+      <audio id="v-acierto" class="clip" src="assets/voice/acierto.mp3" data-duration="13.27" data-start="52.6" data-track-index="5" data-volume="1"></audio>
+      <audio id="v-memoria" class="clip" src="assets/voice/memoria.mp3" data-duration="13.7" data-start="76.3" data-track-index="5" data-volume="1"></audio>
+    </div>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

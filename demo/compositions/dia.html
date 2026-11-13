@@ -1,0 +1,19 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #1d2a3f; font-family: Inter, sans-serif; overflow: hidden; }
+    #dia-text {
+      position: absolute; left: 0; width: 1920px; top: 480px; text-align: center;
+      font-size: 84px; font-weight: 700; color: #fff; letter-spacing: -0.02em;
+    }
+    #dia-text span { display: inline-block; margin: 0 10px; }
+  </style>
+  <div id="root" data-composition-id="dia" data-width="1920" data-height="1080">
+    <h2 id="dia-text" class="clip" data-start="0" data-duration="1.8"><span>Al</span><span>día</span><span>siguiente…</span></h2>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#dia-text span", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, stagger: 0.08, ease: "power2.out" }, 0.1);
+    tl.to("#dia-text", { opacity: 0, filter: "blur(8px)", duration: 0.2, ease: "power3.in" }, 1.55);
+    window.__timelines["dia"] = tl;
+  </script>
+</template>

@@ -1,0 +1,55 @@
+<template>
+  <style>
+    #root { position:absolute; inset:0; font-family:Inter, sans-serif; pointer-events:none; }
+    #root .cap { position:absolute; left:210px; width:1500px; top:906px; margin:0; text-align:center;
+      font-size:33px; line-height:1.18; font-weight:600; color:#1d2a3f; }
+    #root .cap .who { display:inline-block; margin-right:14px; padding:3px 10px; border-radius:8px; background:#e3ebfd;
+      color:#1d4ab4; font-size:24px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; vertical-align:middle; }
+  </style>
+  <div id="root" data-composition-id="captions" data-width="1920" data-height="1080">
+    <p id="cap00" class="clip cap" data-start="5.2" data-duration="2.0"><span class="who">Profe</span><span id="cap00-t">¡Hola, Ana! Un gusto conocerte.</span></p>
+    <p id="cap01" class="clip cap" data-start="7.2" data-duration="4.0"><span class="who">Profe</span><span id="cap01-t">Qué bien que estemos preparándonos con tiempo para ese examen del viernes.</span></p>
+    <p id="cap02" class="clip cap" data-start="11.2" data-duration="2.6"><span class="who">Profe</span><span id="cap02-t">Me encanta que aprendas mejor con dibujos,</span></p>
+    <p id="cap03" class="clip cap" data-start="13.8" data-duration="3.55"><span class="who">Profe</span><span id="cap03-t">así que usaremos muchos diagramas y gráficas.</span></p>
+    <p id="cap04" class="clip cap" data-start="18.8" data-duration="2.2"><span class="who">Profe</span><span id="cap04-t">¡Por cierto! Ya completamos tu perfil,</span></p>
+    <p id="cap05" class="clip cap" data-start="21.0" data-duration="3.85"><span class="who">Profe</span><span id="cap05-t">así que ya estamos listos para ir directo a lo que necesitas.</span></p>
+    <p id="cap06" class="clip cap" data-start="27.3" data-duration="2.3"><span class="who">Profe</span><span id="cap06-t">¡Qué gran iniciativa traer el taller hoy!</span></p>
+    <p id="cap07" class="clip cap" data-start="29.6" data-duration="2.7"><span class="who">Profe</span><span id="cap07-t">«Taller 3: Ecuaciones cuadráticas».</span></p>
+    <p id="cap08" class="clip cap" data-start="32.3" data-duration="3.0"><span class="who">Profe</span><span id="cap08-t">Suena perfecto para prepararte con todo para el examen.</span></p>
+    <p id="cap09" class="clip cap" data-start="35.3" data-duration="2.9"><span class="who">Profe</span><span id="cap09-t">Vamos a ir resolviéndolo paso a paso.</span></p>
+    <p id="cap10" class="clip cap" data-start="40.6" data-duration="5.5"><span class="who">Profe</span><span id="cap10-t">Imagina que tenemos x² − 7x + 10 = 0.</span></p>
+    <p id="cap11" class="clip cap" data-start="46.1" data-duration="5.25"><span class="who">Profe</span><span id="cap11-t">Buscamos dos números que multiplicados den 10 y sumados den −7.</span></p>
+    <p id="cap12" class="clip cap" data-start="52.9" data-duration="1.2"><span class="who">Profe</span><span id="cap12-t">¡Excelente trabajo, Ana!</span></p>
+    <p id="cap13" class="clip cap" data-start="54.1" data-duration="6.4"><span class="who">Profe</span><span id="cap13-t">Lo hiciste perfecto y encontraste las soluciones correctas: x = 2 y x = 3.</span></p>
+    <p id="cap14" class="clip cap" data-start="60.5" data-duration="2.0"><span class="who">Profe</span><span id="cap14-t">¡Qué buena racha para empezar!</span></p>
+    <p id="cap15" class="clip cap" data-start="62.6" data-duration="2.6"><span class="who">Profe</span><span id="cap15-t">Ahora pasemos al segundo ejercicio.</span></p>
+    <p id="cap16" class="clip cap" data-start="76.7" data-duration="2.3"><span class="who">Profe</span><span id="cap16-t">¡Hola, Ana! ¡Qué gusto verte de nuevo!</span></p>
+    <p id="cap17" class="clip cap" data-start="79.0" data-duration="4.3"><span class="who">Profe</span><span id="cap17-t">Me alegra mucho que sigamos preparándonos para tu examen del viernes.</span></p>
+    <p id="cap18" class="clip cap" data-start="83.7" data-duration="4.0"><span class="who">Profe</span><span id="cap18-t">La última vez factorizaste súper bien esa ecuación cruzada.</span></p>
+    <p id="cap19" class="clip cap" data-start="87.7" data-duration="2.2"><span class="who">Profe</span><span id="cap19-t">¿Listos para el siguiente reto?</span></p>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#cap00-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 5.2);
+    tl.fromTo("#cap01-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 7.2);
+    tl.fromTo("#cap02-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 11.2);
+    tl.fromTo("#cap03-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 13.8);
+    tl.fromTo("#cap04-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 18.8);
+    tl.fromTo("#cap05-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 21.0);
+    tl.fromTo("#cap06-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 27.3);
+    tl.fromTo("#cap07-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 29.6);
+    tl.fromTo("#cap08-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 32.3);
+    tl.fromTo("#cap09-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 35.3);
+    tl.fromTo("#cap10-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 40.6);
+    tl.fromTo("#cap11-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 46.1);
+    tl.fromTo("#cap12-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 52.9);
+    tl.fromTo("#cap13-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 54.1);
+    tl.fromTo("#cap14-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 60.5);
+    tl.fromTo("#cap15-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 62.6);
+    tl.fromTo("#cap16-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 76.7);
+    tl.fromTo("#cap17-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 79.0);
+    tl.fromTo("#cap18-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 83.7);
+    tl.fromTo("#cap19-t", {opacity:0, filter:"blur(4px)"}, {opacity:1, filter:"blur(0px)", duration:0.15, ease:"power2.out"}, 87.7);
+    window.__timelines["captions"] = tl;
+  </script>
+</template>

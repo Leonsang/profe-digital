@@ -1,0 +1,41 @@
+<template>
+  <style>
+    #root { position: absolute; inset: 0; background: #f6f3ec; font-family: Inter, sans-serif; overflow: hidden; }
+    #intro-mark {
+      position: absolute; left: 50%; top: 300px; width: 168px; height: 168px; margin-left: -84px;
+      border-radius: 44px; background: #1d2a3f; color: #fff; font-size: 104px; font-weight: 400;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #intro-name {
+      position: absolute; left: 0; width: 1920px; top: 516px; text-align: center;
+      font-size: 104px; font-weight: 900; color: #1d2a3f; letter-spacing: -0.03em;
+    }
+    #intro-name span { display: inline-block; }
+    #intro-line {
+      position: absolute; left: 0; width: 1920px; top: 664px; text-align: center;
+      font-size: 40px; font-weight: 400; color: #66707f;
+    }
+    #intro-line span { display: inline-block; margin: 0 6px; }
+    #intro-line .accent { color: #e2552b; font-weight: 700; }
+  </style>
+  <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
+    <div id="intro-mark" class="clip" data-start="0" data-duration="4.5">∑</div>
+    <h1 id="intro-name" class="clip" data-start="0" data-duration="4.5">
+      <span>P</span><span>r</span><span>o</span><span>f</span><span>e</span><span>&nbsp;</span><span>D</span><span>i</span><span>g</span><span>i</span><span>t</span><span>a</span><span>l</span>
+    </h1>
+    <p id="intro-line" class="clip" data-start="0" data-duration="4.5">
+      <span>Te</span><span>escucha,</span><span>dibuja,</span><span>recuerda</span><span>y</span><span class="accent">celebra</span><span>contigo.</span>
+    </p>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#intro-mark", { scale: 0.4, opacity: 0, rotate: -12 }, { scale: 1, opacity: 1, rotate: 0, duration: 0.7, ease: "expo.out" }, 0.1);
+    tl.fromTo("#intro-name span", { opacity: 0.25, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, stagger: 0.05, ease: "power2.out" }, 0.45);
+    tl.fromTo("#intro-line span", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.13, stagger: 0.09, ease: "power2.out" }, 1.4);
+    // el ∑ se convierte en el mundo siguiente: crece y se lleva todo
+    tl.to(["#intro-name", "#intro-line"], { opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power3.in" }, 3.75);
+    tl.to("#intro-mark", { scale: 14, duration: 0.6, ease: "power3.in" }, 3.85);
+    tl.to("#intro-mark", { opacity: 0, duration: 0.15 }, 4.3);
+    window.__timelines["intro"] = tl;
+  </script>
+</template>

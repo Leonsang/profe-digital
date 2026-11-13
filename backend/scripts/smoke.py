@@ -18,6 +18,7 @@ async def main():
                 audio += len(msg); continue
             data = json.loads(msg); k = data["type"]
             key = k + (":" + data["kind"] if k == "board" else "")
+            if k == "milestone": print("HITO:", data["title"])
             kinds[key] = kinds.get(key, 0) + 1
             if k == "transcript" and data["role"] == "profe" and data["final"]: profe.append(data["text"])
             if k == "error": print("ERROR", data); return

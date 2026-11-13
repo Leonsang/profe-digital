@@ -1,0 +1,36 @@
+<template>
+  <style>
+    #root { position:absolute; inset:0; background:#f6f3ec; font-family:Inter, sans-serif; overflow:hidden; }
+    #avance-plate { position:absolute; left:233px; top:170px; width:1454px; height:720px;
+      filter: drop-shadow(0 24px 40px rgba(29,42,63,.16)); }
+    #avance-frame { position:absolute; inset:0; }
+    #avance-view { position:absolute; inset:0; overflow:hidden; background:#f8f9fb; clip-path: inset(0px 0px 0px 0px round 18px); }
+    #root .shot { position:absolute; left:0; top:0; width:1454px; height:720px; overflow:hidden; }
+    #root .cam { position:absolute; left:0; top:0; width:1568px; transform-origin:0 0; }
+    #root .cam img { display:block; width:1568px; height:auto; }
+    #root .title { position:absolute; left:233px; top:92px; display:flex; align-items:baseline; gap:16px; }
+    #root .kicker { font-size:30px; font-weight:700; color:#e2552b; letter-spacing:.06em; }
+    #root .title h2 { margin:0; font-size:44px; font-weight:700; color:#1d2a3f; letter-spacing:-.01em; }
+    
+  </style>
+  <div id="root" data-composition-id="avance" data-width="1920" data-height="1080">
+    <div id="avance-title" class="clip title" data-start="0" data-duration="8.0"><span id="avance-kicker" class="kicker">06</span><h2 id="avance-h">Lleva tu avance</h2></div>
+    <div id="avance-plate"><div id="avance-frame"><div id="avance-view">
+      <div id="avance-shot0" class="clip shot" data-start="0" data-duration="8.0" data-hold><div id="avance-shot0-cam" class="cam"><img src="assets/shots/progress.jpg" alt="" width="1568" height="731" /></div></div>
+    </div></div></div>
+    
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#avance-frame", {x:420, opacity:0, filter:"blur(14px)"}, {x:0, opacity:1, filter:"blur(0px)", duration:0.45, ease:"expo.out"}, 0);
+    tl.fromTo("#avance-kicker", {opacity:0}, {opacity:1, duration:0.2}, 0.05);
+    tl.fromTo("#avance-h", {opacity:0, filter:"blur(8px)"}, {opacity:1, filter:"blur(0px)", duration:0.2, ease:"power4.out"}, 0.15);
+    tl.set("#avance-shot0-cam", {"scale": 2.3, "x": -2527.5, "y": -690.0}, 0);
+    tl.set("#avance-view", {clipPath: "inset(0px 375.1px 0px 375.1px round 18px)"}, 0);
+    tl.to("#avance-shot0-cam", {...{"scale": 2.3, "x": -2527.5, "y": -961.3}, duration: 0.7, ease: "power2.inOut"}, 3.6);
+    tl.to("#avance-view", {clipPath: "inset(0px 375.1px 0px 375.1px round 18px)", duration: 0.7, ease: "power2.inOut"}, 3.6);
+    tl.to("#avance-frame", {opacity:0, filter:"blur(6px)", duration:0.25, ease:"power3.in"}, 7.73);
+    tl.to("#avance-title", {opacity:0, duration:0.2, ease:"power3.in"}, 7.75);
+    window.__timelines["avance"] = tl;
+  </script>
+</template>
