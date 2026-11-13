@@ -226,7 +226,7 @@ def active_workshop(student_id: str) -> dict[str, Any] | None:
     return data
 
 
-def update_workshop_plan(workshop_id: int, plan: dict[str, Any], status: str | None = None) -> None:
+def update_workshop_plan(student_id: str, workshop_id: int, plan: dict[str, Any], status: str | None = None) -> None:
     with _db() as conn:
         if status:
             conn.execute(
@@ -235,3 +235,9 @@ def update_workshop_plan(workshop_id: int, plan: dict[str, Any], status: str | N
             )
         else:
             conn.execute("UPDATE workshops SET plan = ? WHERE id = ?", (json.dumps(plan, ensure_ascii=False), workshop_id))
+
+
+# En Cloud Run el disco no persiste: PROFE_STORE=firestore cambia todas las funciones de arriba
+# por las de store_firestore (mismo contrato).
+if os.getenv("PROFE_STORE", "sqlite").lower() == "firestore":
+    from .store_firestore import *  # noqa: E402,F401,F403

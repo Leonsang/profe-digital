@@ -114,7 +114,7 @@ def update_workshop(tool_context: ToolContext, exercise_index: int, status: str,
     if note:
         exercise["note"] = note
     all_done = all(e.get("status") == "done" for e in exercises)
-    store.update_workshop_plan(workshop["id"], workshop["plan"], "done" if all_done else "active")
+    store.update_workshop_plan(student_id, workshop["id"], workshop["plan"], "done" if all_done else "active")
     won: list[dict[str, str]] = []
     if status == "done" and not was_done:
         _, won = progress.on_attempt(student_id, exercise.get("skill") or workshop["topic"], workshop["topic"], True)

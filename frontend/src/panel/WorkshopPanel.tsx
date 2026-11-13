@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { API, studentId, type Progress, type Workshop } from '../lib/live';
+import { api, studentId, type Progress, type Workshop } from '../lib/live';
 
 const STATUS: Record<string, string> = {
   pending: 'Pendiente',
@@ -25,7 +25,7 @@ export function WorkshopPanel({ workshop, live, onUploaded }: Props) {
     try {
       const body = new FormData();
       body.append('file', file);
-      const res = await fetch(`${API}/api/students/${studentId()}/workshop`, { method: 'POST', body });
+      const res = await api(`/api/students/${studentId()}/workshop`, { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'No pude leer el taller.');
       onUploaded(data as Progress);

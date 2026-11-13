@@ -6,6 +6,8 @@ import { CARD, CardShapeUtil, cardSize } from './board/CardShape';
 import {
   API,
   LiveSession,
+  accessCode,
+  api,
   studentId,
   type BoardEvent,
   type Milestone,
@@ -15,6 +17,7 @@ import {
   type ServerEvent,
   type Status,
 } from './lib/live';
+import { AccessGate } from './panel/AccessGate';
 import { Celebration } from './panel/Celebration';
 import { ProgressPanel } from './panel/ProgressPanel';
 import { QuestPanel } from './panel/QuestPanel';
@@ -54,12 +57,32 @@ export default function App() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [celebrations, setCelebrations] = useState<Milestone[]>([]);
 
+  // null = aún no se sabe; true = hay que pedir el código antes de usar la app
+  const [locked, setLocked] = useState<boolean | null>(null);
+
   useEffect(() => {
-    fetch(`${API}/api/students/${studentId()}/progress`)
+    fetch(`${API}/api/access`)
+      .then((r) => r.json())
+      .then(async (info: { required: boolean }) => {
+        if (!info.required) return setLocked(false);
+        if (!accessCode()) return setLocked(true);
+        const ok = await fetch(`${API}/api/access`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ code: accessCode() }),
+        }).then((r) => r.ok);
+        setLocked(!ok);
+      })
+      .catch(() => setLocked(false));
+  }, []);
+
+  useEffect(() => {
+    if (locked !== false) return;
+    api(`/api/students/${studentId()}/progress`)
       .then((r) => (r.ok ? r.json() : null))
       .then((p: Progress | null) => p && setProgress(p))
       .catch(() => {});
-  }, []);
+  }, [locked]);
 
   const closeCelebration = useCallback(() => setCelebrations((c) => c.slice(1)), []);
 
@@ -180,6 +203,7 @@ export default function App() {
       onSpeaking: setSpeaking,
       onMicLevel: setMicLevel,
       onNotice: setDetail,
+      onAccessDenied: () => setLocked(true),
     });
     session.current = live;
     live.setMuted(muted);
@@ -359,6 +383,7 @@ export default function App() {
         </aside>
       </main>
       {celebrations[0] && <Celebration milestone={celebrations[0]} onDone={closeCelebration} />}
+      {locked && <AccessGate onUnlocked={() => setLocked(false)} />}
     </div>
   );
 }

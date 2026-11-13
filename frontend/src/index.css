@@ -1012,3 +1012,52 @@ input {
   background: var(--card);
   z-index: 2;
 }
+
+/* ---------------------------------------------------------------- código de acceso */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: rgba(246, 243, 236, 0.92);
+  backdrop-filter: blur(6px);
+}
+
+.gate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(400px, 92vw);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(29, 42, 63, 0.16);
+  text-align: center;
+}
+
+.gate-card h2 {
+  margin: 0;
+}
+
+.gate-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.gate-card input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.gate-link {
+  font-size: 13px;
+  color: var(--blue);
+}

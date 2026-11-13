@@ -96,11 +96,30 @@ export interface LiveHandlers {
   onSpeaking: (speaking: boolean) => void;
   onMicLevel: (level: number) => void;
   onNotice?: (message: string) => void;
+  onAccessDenied?: () => void;
 }
 
 const BACKEND = (import.meta.env.VITE_BACKEND_WS as string | undefined) ?? 'ws://localhost:8000';
 /** Misma URL del backend, en http(s), para la API REST. */
 export const API = BACKEND.replace(/^ws/, 'http');
+
+const CODE_KEY = 'profe-digital:code';
+
+/** Código de acceso guardado en este navegador (vacío si el backend no lo pide). */
+export function accessCode(): string {
+  return localStorage.getItem(CODE_KEY) ?? '';
+}
+
+export function saveAccessCode(code: string) {
+  localStorage.setItem(CODE_KEY, code);
+}
+
+/** fetch al backend con el código de acceso. */
+export function api(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  headers.set('x-access-code', accessCode());
+  return fetch(`${API}${path}`, { ...init, headers });
+}
 
 /** Identidad local del estudiante: sin cuentas, el navegador recuerda quién es. */
 export function studentId(): string {
@@ -147,10 +166,22 @@ export class LiveSession {
     });
 
     const id = crypto.randomUUID().slice(0, 8);
-    const ws = new WebSocket(`${BACKEND}/ws/${id}?student=${encodeURIComponent(studentId())}`);
+    const ws = new WebSocket(
+      `${BACKEND}/ws/${id}?student=${encodeURIComponent(studentId())}&code=${encodeURIComponent(accessCode())}`,
+    );
     ws.binaryType = 'arraybuffer';
     ws.onopen = () => this.handlers.onStatus('live');
-    ws.onclose = () => this.handlers.onStatus('closed');
+    ws.onclose = (event) => {
+      if (event.code === 4401) {
+        this.handlers.onAccessDenied?.();
+        this.handlers.onStatus('error', 'El código de acceso no es válido.');
+      } else if (event.code === 4429) {
+        this.handlers.onStatus('error', 'Llegaste al máximo de clases por hora. Vuelve en un rato.');
+      } else {
+        this.handlers.onStatus('closed');
+      }
+      void this.stop();
+    };
     ws.onerror = () => this.handlers.onStatus('error', 'No se pudo conectar con el servidor del profe.');
     ws.onmessage = (msg) => {
       if (msg.data instanceof ArrayBuffer) {

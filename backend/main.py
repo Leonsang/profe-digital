@@ -26,14 +26,18 @@ import base64
 import json
 import logging
 import os
+import hmac
 import re
+import time
+from collections import defaultdict, deque
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-from fastapi import FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect  # noqa: E402
+from fastapi import FastAPI, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from google.adk.agents.live_request_queue import LiveRequestQueue  # noqa: E402
 from google.adk.agents.run_config import RunConfig, StreamingMode  # noqa: E402
@@ -64,6 +68,41 @@ WORKSHOP_TYPES = {"application/pdf", "image/png", "image/jpeg", "image/webp", "t
 # student_id -> (session_id, cola Live) de la clase abierta: así un taller subido por REST llega a la clase.
 _LIVE: dict[str, tuple[str, LiveRequestQueue]] = {}
 _background: set[asyncio.Task] = set()
+
+
+# ---------------------------------------------------------------- acceso
+# Con ACCESS_CODES definido, cada clase y cada taller exigen un código válido (como en los labs del portfolio).
+ACCESS_CODES = [c.strip() for c in os.getenv("ACCESS_CODES", "").split(",") if c.strip()]
+MAX_SESSIONS_PER_HOUR = int(os.getenv("MAX_SESSIONS_PER_HOUR", "6"))
+MAX_SESSION_MIN = float(os.getenv("MAX_SESSION_MIN", "20"))
+_starts: dict[str, deque[float]] = defaultdict(deque)
+
+
+def code_ok(code: str | None) -> bool:
+    if not ACCESS_CODES:
+        return True
+    return any(hmac.compare_digest((code or "").encode(), c.encode()) for c in ACCESS_CODES)
+
+
+def client_ip(headers, fallback: str) -> str:
+    forwarded = headers.get("x-forwarded-for", "")
+    return forwarded.split(",")[0].strip() or fallback
+
+
+def rate_limited(ip: str) -> bool:
+    now = time.time()
+    window = _starts[ip]
+    while window and now - window[0] > 3600:
+        window.popleft()
+    if len(window) >= MAX_SESSIONS_PER_HOUR:
+        return True
+    window.append(now)
+    return False
+
+
+def _require(code: str | None) -> None:
+    if not code_ok(code):
+        raise HTTPException(401, "Código de acceso inválido.")
 
 
 def _flag(name: str, default: str = "1") -> bool:
@@ -114,15 +153,34 @@ async def health() -> dict[str, str]:
     return {"status": "ok", "model": profe_app.root_agent.model}
 
 
+class AccessCheck(BaseModel):
+    code: str = ""
+
+
+@api.get("/api/access")
+async def access_info() -> dict:
+    return {"required": bool(ACCESS_CODES), "max_minutes": MAX_SESSION_MIN}
+
+
+@api.post("/api/access")
+async def access_check(body: AccessCheck) -> dict:
+    _require(body.code)
+    return {"ok": True}
+
+
 @api.get("/api/students/{student_id}/progress")
-async def get_progress(student_id: str) -> dict:
+async def get_progress(student_id: str, x_access_code: str | None = Header(default=None)) -> dict:
+    _require(x_access_code)
     store.ensure_student(_check(student_id))
     return progress.snapshot(student_id)
 
 
 @api.post("/api/students/{student_id}/workshop")
-async def upload_workshop(student_id: str, file: UploadFile) -> dict:
+async def upload_workshop(
+    student_id: str, file: UploadFile, x_access_code: str | None = Header(default=None)
+) -> dict:
     """Recibe el taller, lo prepara con el modelo de texto y lo deja activo (y avisa a la clase abierta)."""
+    _require(x_access_code)
     store.ensure_student(_check(student_id))
     mime = (file.content_type or "").split(";")[0]
     if mime not in WORKSHOP_TYPES:
@@ -165,8 +223,14 @@ async def _remember_session(student_id: str, transcript: list[str]) -> None:
 
 
 @api.websocket("/ws/{session_id}")
-async def live(websocket: WebSocket, session_id: str, student: str = "") -> None:
+async def live(websocket: WebSocket, session_id: str, student: str = "", code: str = "") -> None:
     await websocket.accept()
+    if not code_ok(code):
+        await websocket.close(code=4401, reason="codigo invalido")
+        return
+    if rate_limited(client_ip(websocket.headers, websocket.client.host if websocket.client else "?")):
+        await websocket.close(code=4429, reason="demasiadas clases")
+        return
     student_id = student if STUDENT_ID.match(student or "") else f"anon-{session_id}"
     store.ensure_student(student_id)
     user_id = f"student-{student_id}"
@@ -252,6 +316,12 @@ async def live(websocket: WebSocket, session_id: str, student: str = "") -> None
             if event.turn_complete:
                 await websocket.send_json({"type": "turn_complete"})
 
+    async def time_limit() -> None:
+        await asyncio.sleep(MAX_SESSION_MIN * 60)
+        await websocket.send_json(
+            {"type": "error", "message": f"La clase llegó a su límite de {MAX_SESSION_MIN:g} minutos. ¡Buen trabajo! Empieza otra cuando quieras."}
+        )
+
     async def board() -> None:
         while True:
             payload = await board_queue.get()
@@ -259,7 +329,7 @@ async def live(websocket: WebSocket, session_id: str, student: str = "") -> None
                 rec.event(payload.get("type", "?"), **{k: v for k, v in payload.items() if k in ("kind", "title", "latex", "question")})
             await websocket.send_json(payload)
 
-    tasks = [asyncio.create_task(t()) for t in (upstream, downstream, board)]
+    tasks = [asyncio.create_task(t()) for t in (upstream, downstream, board, time_limit)]
     try:
         done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
