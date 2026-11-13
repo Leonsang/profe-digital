@@ -101,9 +101,22 @@ cd backend && python scripts/smoke.py ws://localhost:8000/ws/test "Explícame el
 
 ## Desplegar
 
-- **Backend:** `backend/Dockerfile` está listo para Cloud Run. Pon `GOOGLE_API_KEY` como secreto y deja una sola instancia por sesión de WebSocket, con *session affinity*.
-- **Frontend:** es estático (`npm run build`). Configura `VITE_BACKEND_WS=wss://…`.
-- **tldraw:** funciona sin clave en localhost; en producción pide una [licencia](https://tldraw.dev/pricing) (`VITE_TLDRAW_LICENSE_KEY`).
+El `Dockerfile` de la raíz construye una sola imagen: compila el frontend y lo sirve desde el backend, en el mismo dominio que el WebSocket.
+
+**Hugging Face Spaces (gratis, sin tarjeta).** `deploy/hf_space.py` crea el Space, carga los secretos y sube el código. Lo ejecuta quien tiene las credenciales; el script no imprime ningún secreto.
+
+```powershell
+backend\.venv\Scripts\python -m pip install huggingface_hub
+$env:HF_TOKEN="hf_..."            # token de escritura
+$env:ACCESS_CODES="tu-codigo"     # el demo gasta tu cuota de Gemini: entra solo quien tenga el código
+$env:FIRESTORE_SA_KEY="ruta\cuenta-de-servicio.json"   # opcional: memoria persistente en Firestore
+backend\.venv\Scripts\python deploy\hf_space.py
+```
+
+- **Sin `FIRESTORE_SA_KEY`**, la memoria vive en SQLite dentro del contenedor y se pierde cuando el Space se reinicia o se duerme.
+- **Código de acceso y límites:** `ACCESS_CODES` exige un código para cada clase y cada taller. `MAX_SESSIONS_PER_HOUR` (6 por IP) y `MAX_SESSION_MIN` (20 minutos) cuidan la cuota.
+- **Cloud Run:** `backend/Dockerfile` sigue sirviendo solo para el backend. Cloud Run exige una cuenta de facturación aunque el uso quede en la capa gratuita.
+- **tldraw:** funciona sin clave en localhost; en producción muestra la marca «Get a license» si no se configura `VITE_TLDRAW_LICENSE_KEY`.
 
 ## Notas
 

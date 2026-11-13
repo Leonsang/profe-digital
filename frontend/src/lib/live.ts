@@ -99,7 +99,10 @@ export interface LiveHandlers {
   onAccessDenied?: () => void;
 }
 
-const BACKEND = (import.meta.env.VITE_BACKEND_WS as string | undefined) ?? 'ws://localhost:8000';
+// En producción el backend sirve también el frontend: mismo dominio. En desarrollo, Vite (5173) y FastAPI (8000).
+const BACKEND =
+  (import.meta.env.VITE_BACKEND_WS as string | undefined) ??
+  (import.meta.env.DEV ? 'ws://localhost:8000' : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
 /** Misma URL del backend, en http(s), para la API REST. */
 export const API = BACKEND.replace(/^ws/, 'http');
 

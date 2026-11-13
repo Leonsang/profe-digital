@@ -36,6 +36,12 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
+# En Hugging Face Spaces la cuenta de servicio de Firestore llega como secreto con el JSON completo.
+if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON") and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+    _sa = Path("/tmp/firestore-sa.json")
+    _sa.write_text(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"], encoding="utf-8")
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(_sa)
+
 from fastapi import FastAPI, Header, HTTPException, UploadFile, WebSocket, WebSocketDisconnect  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
@@ -351,6 +357,14 @@ async def live(websocket: WebSocket, session_id: str, student: str = "", code: s
         job = asyncio.create_task(_remember_session(student_id, transcript))
         _background.add(job)
         job.add_done_callback(_background.discard)
+
+
+# El frontend compilado (Docker de producción) se sirve desde el mismo servidor: mismo dominio que el WebSocket.
+_static = Path(os.getenv("STATIC_DIR", Path(__file__).resolve().parent / "static"))
+if _static.is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    api.mount("/", StaticFiles(directory=_static, html=True), name="frontend")
 
 
 if __name__ == "__main__":
