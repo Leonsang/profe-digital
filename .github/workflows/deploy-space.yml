@@ -8,16 +8,9 @@
 #   HF_SPACE            usuario/nombre del Space; por defecto <tu usuario de HF>/profe-digital
 name: Deploy to Hugging Face Space
 
+# Solo a mano (pestaña Actions → Run workflow): la app corre en vivo dentro de Labs del portfolio,
+# así que el Space de Hugging Face es opcional.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - "Dockerfile"
-      - ".dockerignore"
-      - "deploy/**"
-      - ".github/workflows/deploy-space.yml"
   workflow_dispatch:
 
 concurrency:
