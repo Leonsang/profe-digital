@@ -109,7 +109,7 @@ El `Dockerfile` de la raíz construye una sola imagen: compila el frontend y lo 
 backend\.venv\Scripts\python -m pip install huggingface_hub
 $env:HF_TOKEN="hf_..."            # token de escritura
 $env:ACCESS_CODES="tu-codigo"     # el demo gasta tu cuota de Gemini: entra solo quien tenga el código
-$env:FIRESTORE_SA_KEY="ruta\cuenta-de-servicio.json"   # opcional: memoria persistente en Firestore
+$env:FIRESTORE_SA_KEY="C:\ruta\cuenta-de-servicio.json"   # opcional: memoria persistente en Firestore
 backend\.venv\Scripts\python deploy\hf_space.py
 ```
 
