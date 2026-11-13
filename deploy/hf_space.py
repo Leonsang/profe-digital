@@ -6,9 +6,12 @@ Variables de entorno:
   HF_TOKEN            token de escritura de huggingface.co/settings/tokens (obligatorio)
   HF_SPACE            "usuario/nombre" del Space (por defecto: <tu usuario>/profe-digital)
   ACCESS_CODES        códigos de acceso separados por coma (obligatorio: el demo gasta tu cuota de Gemini)
-  FIRESTORE_SA_KEY    ruta al JSON de la cuenta de servicio de Firestore (opcional; sin él la memoria
-                      vive en SQLite dentro del contenedor y se pierde al reiniciarse el Space)
-La key de Gemini se lee de backend/.env (GOOGLE_API_KEY).
+  FIRESTORE_SA_JSON   contenido del JSON de la cuenta de servicio de Firestore (o FIRESTORE_SA_KEY con su ruta).
+                      Opcional: sin él la memoria vive en SQLite dentro del contenedor y se pierde al
+                      reiniciarse el Space.
+  GOOGLE_API_KEY      key de Gemini (si no está, se lee de backend/.env)
+
+Normalmente lo ejecuta GitHub Actions (.github/workflows/deploy-space.yml) en cada push a main.
 
 Uso (PowerShell):
   $env:HF_TOKEN="hf_..."; $env:ACCESS_CODES="tu-codigo"; backend\\.venv\\Scripts\\python deploy\\hf_space.py
@@ -58,9 +61,12 @@ def need(name: str) -> str:
 def main() -> None:
     token = need("HF_TOKEN")
     codes = need("ACCESS_CODES")
-    gemini_key = (dotenv_values(ROOT / "backend" / ".env").get("GOOGLE_API_KEY") or "").strip()
+    # En GitHub Actions llega como secreto; en local se lee de backend/.env.
+    gemini_key = os.getenv("GOOGLE_API_KEY", "").strip() or (
+        dotenv_values(ROOT / "backend" / ".env").get("GOOGLE_API_KEY") or ""
+    ).strip()
     if not gemini_key:
-        sys.exit("No encontré GOOGLE_API_KEY en backend/.env.")
+        sys.exit("Falta GOOGLE_API_KEY (secreto de GitHub o backend/.env).")
 
     hf = HfApi(token=token)
     user = hf.whoami()["name"]
@@ -72,10 +78,12 @@ def main() -> None:
     # Secretos (cifrados en Hugging Face, no visibles en el repo del Space).
     hf.add_space_secret(space, "GOOGLE_API_KEY", gemini_key)
     hf.add_space_secret(space, "ACCESS_CODES", codes)
-    sa_path = os.getenv("FIRESTORE_SA_KEY", "").strip()
+    sa_json = os.getenv("FIRESTORE_SA_JSON", "").strip()
+    if not sa_json and os.getenv("FIRESTORE_SA_KEY", "").strip():
+        sa_json = Path(os.environ["FIRESTORE_SA_KEY"].strip()).read_text(encoding="utf-8")
     store = "sqlite"
-    if sa_path:
-        hf.add_space_secret(space, "GOOGLE_APPLICATION_CREDENTIALS_JSON", Path(sa_path).read_text(encoding="utf-8"))
+    if sa_json:
+        hf.add_space_secret(space, "GOOGLE_APPLICATION_CREDENTIALS_JSON", sa_json)
         store = "firestore"
     print(f"Secretos cargados. Memoria: {store}.")
 

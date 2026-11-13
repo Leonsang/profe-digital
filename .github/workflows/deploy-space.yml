@@ -1,0 +1,64 @@
+# Despliega la app en Hugging Face Spaces en cada push a main (o a mano desde la pestaña Actions).
+# Secretos del repo (Settings → Secrets and variables → Actions → Secrets):
+#   HF_TOKEN            token de escritura de huggingface.co/settings/tokens
+#   GOOGLE_API_KEY      key de Gemini (AI Studio)
+#   ACCESS_CODES        códigos de acceso al demo, separados por coma
+#   FIRESTORE_SA_JSON   (opcional) JSON completo de la cuenta de servicio de Firestore
+# Variable del repo (pestaña Variables), opcional:
+#   HF_SPACE            usuario/nombre del Space; por defecto <tu usuario de HF>/profe-digital
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "deploy/**"
+      - ".github/workflows/deploy-space.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-space
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ACCESS_CODES: ${{ secrets.ACCESS_CODES }}
+        run: |
+          missing=""
+          [ -z "$HF_TOKEN" ] && missing="$missing HF_TOKEN"
+          [ -z "$GOOGLE_API_KEY" ] && missing="$missing GOOGLE_API_KEY"
+          [ -z "$ACCESS_CODES" ] && missing="$missing ACCESS_CODES"
+          if [ -n "$missing" ]; then
+            echo "::error::Faltan secretos del repo:$missing (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deploy tools
+        run: pip install "huggingface_hub>=1.0" python-dotenv
+
+      - name: Deploy
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          ACCESS_CODES: ${{ secrets.ACCESS_CODES }}
+          FIRESTORE_SA_JSON: ${{ secrets.FIRESTORE_SA_JSON }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: python deploy/hf_space.py

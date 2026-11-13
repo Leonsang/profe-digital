@@ -103,7 +103,16 @@ cd backend && python scripts/smoke.py ws://localhost:8000/ws/test "Explícame el
 
 El `Dockerfile` de la raíz construye una sola imagen: compila el frontend y lo sirve desde el backend, en el mismo dominio que el WebSocket.
 
-**Hugging Face Spaces (gratis, sin tarjeta).** `deploy/hf_space.py` crea el Space, carga los secretos y sube el código. Lo ejecuta quien tiene las credenciales; el script no imprime ningún secreto.
+**Hugging Face Spaces (gratis, sin tarjeta).** El workflow `.github/workflows/deploy-space.yml` despliega el Space en cada push a `main`. Solo hay que cargar estos secretos una vez en GitHub (*Settings → Secrets and variables → Actions*):
+
+| Secreto | Qué es |
+|---|---|
+| `HF_TOKEN` | Token de escritura de huggingface.co |
+| `GOOGLE_API_KEY` | Key de Gemini (AI Studio) |
+| `ACCESS_CODES` | Códigos de acceso al demo, separados por coma |
+| `FIRESTORE_SA_JSON` | Opcional: JSON de la cuenta de servicio de Firestore, para memoria persistente |
+
+El workflow ejecuta `deploy/hf_space.py`, que crea el Space, le copia los secretos y sube el código sin imprimir ningún secreto. También se puede ejecutar a mano:
 
 ```powershell
 backend\.venv\Scripts\python -m pip install huggingface_hub
